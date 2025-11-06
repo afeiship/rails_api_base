@@ -95,11 +95,13 @@ module Queryable
 
       direction = sort_param.start_with?('-') ? :desc : :asc
       field = sort_param.delete_prefix('-').to_sym
+      connection = scope.connection
 
       if config[:allowed_fields].empty? || config[:allowed_fields].include?(field)
-        scope.order(Arel.sql(sanitize_sql_order(field, direction)))
+        quoted_field = connection.quote_column_name(field)
+        return scope.order(Arel.sql("#{quoted_field} #{direction}"))
       else
-        scope
+        return scope
       end
     end
 
