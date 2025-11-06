@@ -2,7 +2,8 @@
 module RailsApiBase
   class BaseController < ActionController::API
     include BlueprintOptionsSupport
-    
+    include Queryable
+
     # 默认开启 :defaults 模式
     blueprint_options_default :defaults
 
