@@ -1,32 +1,31 @@
 # app/controllers/rails_api_base/base_controller.rb
 module RailsApiBase
   class BaseController < ActionController::API
+    include BlueprintOptionsSupport
+    
+    # 默认开启 :defaults 模式
+    blueprint_options_default :defaults
+
     # === 统一成功响应 ===
     def render_success(data, status: :ok, message: "success", code: nil)
-      code ||= response_code_for(action_name,  data, status: status)
-      render json: { code: code, msg: message,  data }, status: status
+      code ||= response_code_for(action_name, status: status)
+      render json: { code: code, msg: message,  data: data }, status: status
     end
 
     # === 统一错误响应 ===
     def render_error(message: "Unprocessable Entity", status: :unprocessable_entity, errors: nil)
-      code = response_code_for(action_name, errors: errors, status: status)
-      render json: { code: code, msg: message,  errors }, status: status
+      code = response_code_for(action_name, status: status)
+      render json: { code: code, msg: message,  errors: errors }, status: status
     end
 
     # === 允许子类自定义响应 code ===
     def response_code_for(action, **context)
-      Rack::Utils.status_code(context[:status])
-    end
-
-    # === 解析 ?fields=title,user ===
-    def requested_fields
-      return nil unless params[:fields].present?
-      params[:fields].split(",").map(&:strip).map(&:to_sym)
-    end
-
-    # === 传递给 Blueprint 的选项 ===
-    def blueprint_options
-      { fields: requested_fields }
+      status = context[:status] || :ok
+      if status.is_a?(Integer)
+        status
+      else
+        Rack::Utils::SYMBOL_TO_STATUS_CODE.fetch(status, 200)
+      end
     end
 
     # === CRUD 基础动作 ===
@@ -83,7 +82,7 @@ module RailsApiBase
     def blueprint_class
       "#{resource_class}Blueprint".constantize
     rescue NameError
-      nil # 未定义 Blueprint 时回退到 as_json
+      nil
     end
 
     # === 资源推导 ===
