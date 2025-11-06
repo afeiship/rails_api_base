@@ -3,10 +3,34 @@ module Queryable
   extend ActiveSupport::Concern
 
   DEFAULT_CONFIG = {
-    pagination: { enabled: false, page_param: :page, per_param: :size, default_per: 10, max_per: 100 },
-    sorting:    { enabled: false, sort_param: :sort, default_direction: :asc, allowed_fields: [] },
-    searching:  { enabled: false, search_param: :q, searchable_fields: [] },
-    filtering:  { enabled: false, filter_param: :filter, filterable_fields: [] }
+    pagination: {
+      enabled: false,
+      page_param: :page,
+      per_param: :size,
+      default_per: 10,
+      max_per: 100
+    },
+    sorting: {
+      enabled: false,
+      sort_param: :sort,
+      default_direction: :asc,
+      allowed_fields: []
+    },
+    searching: {
+      enabled: false,
+      search_param: :q,
+      searchable_fields: []
+    },
+    filtering: {
+      enabled: false,
+      filter_param: :filter,
+      filterable_fields: []
+    },
+    meta: {
+      enabled: true,
+      rows_key: :rows,
+      total_key: :total
+    }
   }.freeze
 
   class_methods do
@@ -20,39 +44,47 @@ module Queryable
         end
       end
 
-      # 定义实例方法，供 InstanceMethods 使用
       define_method(:query_config) { config }
-
       include InstanceMethods
     end
   end
 
   module InstanceMethods
-    def apply_query(scope)
-      scope = apply_filtering(scope)    if query_config[:filtering][:enabled]
-      scope = apply_searching(scope)    if query_config[:searching][:enabled]
-      scope = apply_sorting(scope)      if query_config[:sorting][:enabled]
-      scope = apply_pagination(scope)   if query_config[:pagination][:enabled]
-      scope
+    def apply_query_with_meta(scope)
+      config = query_config
+      meta = {}
+
+      # 应用过滤、搜索、排序（不分页）
+      base_scope = scope
+      base_scope = apply_filtering(base_scope)    if config[:filtering][:enabled]
+      base_scope = apply_searching(base_scope)    if config[:searching][:enabled]
+      base_scope = apply_sorting(base_scope)      if config[:sorting][:enabled]
+
+      # 获取总数（用于 meta）
+      if config[:meta][:enabled]
+        meta[config[:meta][:total_key]] = base_scope.count
+      end
+
+      # 应用分页
+      paginated_scope = base_scope
+      if config[:pagination][:enabled]
+        paginated_scope = apply_pagination(base_scope)
+      end
+
+      {
+        collection: paginated_scope,
+        meta: config[:meta][:enabled] ? meta : nil
+      }
     end
 
     private
 
     def apply_pagination(scope)
       config = query_config[:pagination]
-
-      # page 至少为 1
       page = [params[config[:page_param]].to_i, 1].max
-
-      # per: 如果 <=0，用默认值；否则限制在 [1, max_per]
       per_input = params[config[:per_param]].to_i
-      per = if per_input <= 0
-              config[:default_per]
-            else
-              [per_input, config[:max_per]].min
-            end
+      per = per_input <= 0 ? config[:default_per] : [per_input, config[:max_per]].min
       per = [per, 1].max
-
       scope.page(page).per(per)
     end
 
@@ -84,6 +116,8 @@ module Queryable
       searchable_fields = config[:searchable_fields]
       return scope if searchable_fields.empty?
 
+      connection = scope.connection
+
       terms = Array.new(searchable_fields.size, "%#{term}%")
       conditions = searchable_fields.map do |f|
         "LOWER(#{connection.quote_column_name(f)}) LIKE LOWER(?)"
@@ -99,6 +133,8 @@ module Queryable
       filterable_fields = config[:filterable_fields].map(&:to_s)
       filters = filters.slice(*filterable_fields)
 
+      connection = scope.connection
+
       filters.inject(scope) do |s, (field, value)|
         if value.is_a?(Hash)
           op = value.keys.first&.to_sym
@@ -111,6 +147,7 @@ module Queryable
     end
 
     def apply_filter_operation(scope, field, op, value)
+      connection = scope.connection
       quoted = connection.quote_column_name(field)
       case op
       when :eq  then scope.where("#{quoted} = ?", val_or_array(value))

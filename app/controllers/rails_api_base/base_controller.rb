@@ -33,8 +33,11 @@ module RailsApiBase
     before_action :set_resource, only: %i[show update destroy]
 
     def index
-      items = collection
-      data = serialize_collection(items)
+      result = apply_query_with_meta(collection)
+      data = {
+        query_config[:meta][:rows_key] => serialize_collection(result[:collection])
+      }
+      data.merge!(result[:meta]) if result[:meta]
       render_success(data)
     end
 
