@@ -3,9 +3,7 @@
     "requireCleanWorkingDir": false
   },
   "hooks": {
-    "after:init": [
-      "t2k"
-    ],
+    "after:init": ["t2k", "npm run clean"],
     "after:bump": [
       "syncv -p lib/rails_api_base/version.rb",
       "npm run build",
