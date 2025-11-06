@@ -36,6 +36,21 @@ class PostBlueprint < Blueprinter::Base
   }
 end
 
+# blueprint file - optimize version(dynamic_fields)
+class PostBlueprint < Blueprinter::Base
+  identifier :id
+  fields :title, :content
+
+  # === 动态注册可选字段 ===
+  dynamic_fields = [:user, :tags]
+
+  dynamic_fields.each do |field_name|
+    field field_name, if: ->(_, model, options) {
+      Array(options[:fields]).include?(field_name)
+    }
+  end
+end
+
 # posts controller
 class PostsController < RailsApiBase::BaseController
   blueprint_options_default :fields
