@@ -1,6 +1,6 @@
 {
   "name": "rails_api_base",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Standardized JSON API base controller for Rails with Blueprinter support.",
   "main": "index.js",
