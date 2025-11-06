@@ -1,0 +1,21 @@
+{
+  "name": "rails_api_base",
+  "version": "1.0.1",
+  "description": "> Standardized JSON API base controller for Rails with Blueprinter support.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "clean": "rm -rf *.gem",
+    "test": "ruby __tests__/index.rb",
+    "prebuild": "yarn version --patch",
+    "build": "gem build *.gemspec",
+    "pubpush": "gem push *.gem",
+    "unpublish": "gem yank rails_api_base -v '0.1.0'"
+  },
+  "keywords": [],
+  "author": "afeiship",
+  "license": "ISC"
+}
