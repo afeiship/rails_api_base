@@ -48,7 +48,8 @@ module RailsApiBase
 
     def create
       resource = resource_class.new(resource_params)
-      if resource.save
+      if before_save(resource) && resource.save
+        after_save(resource)
         data = serialize_resource(resource)
         render_success(data, status: :created, message: "Created successfully")
       else
@@ -57,13 +58,30 @@ module RailsApiBase
     end
 
     def update
-      if resource.update(resource_params)
+      if before_save(resource) && resource.update(resource_params)
+        after_save(resource)
         data = serialize_resource(resource)
         render_success(data, message: "Updated successfully")
       else
         render_error(message: "Validation failed", errors: resource.errors.full_messages)
       end
     end
+
+    # === 可选：通用钩子（默认调用 create/update 钩子）===
+    def before_save(resource)
+      action_name == "create" ? before_create(resource) : before_update(resource)
+    end
+
+    def after_save(resource)
+      action_name == "create" ? after_create(resource) : after_update(resource)
+    end
+
+    # === 子类覆盖这些 ===
+    def before_create(resource); true; end
+    def after_create(resource); end
+
+    def before_update(resource); true; end
+    def after_update(resource); end
 
     def destroy
       resource.destroy
