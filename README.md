@@ -22,20 +22,6 @@ gem 'blueprinter'
 -./app/controllers/posts_controller.rb
 
 ```rb
-# blueprint file
-class PostBlueprint < Blueprinter::Base
-  identifier :id
-  fields :title, :content
-
-  field :user, if: ->(_field_name, model, options) {
-    Array(options[:fields]).include?(:user)
-  }
-
-  field :tags, if: ->(_field_name, model, options) {
-    Array(options[:fields]).include?(:tags)
-  }
-end
-
 # blueprint file - optimize version(dynamic_fields)
 class PostBlueprint < Blueprinter::Base
   identifier :id
