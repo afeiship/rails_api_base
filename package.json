@@ -1,6 +1,6 @@
 {
   "name": "rails_api_base",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "> Standardized JSON API base controller for Rails with Blueprinter support.",
   "main": "index.js",
   "directories": {
