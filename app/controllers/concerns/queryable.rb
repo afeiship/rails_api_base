@@ -129,11 +129,18 @@ module Queryable
 
     def apply_filtering(scope)
       config = query_config[:filtering]
-      filters = params[config[:filter_param]] || {}
-      return scope if filters.empty?
+      raw_filters = params[config[:filter_param]]
+      return scope if raw_filters.blank?
 
+      # 1. 获取允许过滤的字段名（字符串数组）
       filterable_fields = config[:filterable_fields].map(&:to_s)
-      filters = filters.slice(*filterable_fields)
+
+      # 2. permit 这些字段（包括嵌套操作符，如 filter[status][eq]）
+      permitted = raw_filters.permit(filterable_fields.map { |f| "#{f}" } +
+                                       filterable_fields.map { |f| "#{f}.*" })
+
+      # 3. 转为普通 Hash
+      filters = permitted.to_h
 
       connection = scope.connection
 
