@@ -18,8 +18,8 @@ gem 'blueprinter'
 ```
 
 ## Usage
--./app/blueprints/post_blueprint.rb
--./app/controllers/posts_controller.rb
+- ./app/blueprints/post_blueprint.rb
+- ./app/controllers/posts_controller.rb
 
 ```rb
 # blueprint file - optimize version(dynamic_fields)
