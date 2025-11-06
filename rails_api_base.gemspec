@@ -25,5 +25,5 @@ Gem::Specification.new do |spec|
   # api_core.gemspec
   spec.add_dependency "rails", ">= 6.0"
   spec.add_dependency "blueprinter"   # 核心序列化
-  spec.add_dependency "kaminari"    # 可选：如果你要封装分页
+  # spec.add_dependency "kaminari"    # 可选：如果你要封装分页
 end
