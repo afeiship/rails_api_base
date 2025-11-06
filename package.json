@@ -1,6 +1,6 @@
 {
   "name": "rails_api_base",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "private": true,
   "description": "Standardized JSON API base controller for Rails with Blueprinter support.",
   "main": "index.js",
@@ -14,9 +14,15 @@
     "prebuild": "yarn version --patch",
     "build": "gem build *.gemspec",
     "pubpush": "gem push *.gem",
-    "unpublish": "gem yank rails_api_base -v '0.1.0'"
+    "unpublish": "gem yank rails_api_base -v '0.1.0'",
+    "release": "release-it"
   },
-  "keywords": [],
+  "keywords": [
+    "api",
+    "json",
+    "rails",
+    "curdable"
+  ],
   "author": "afeiship",
   "license": "ISC"
 }
