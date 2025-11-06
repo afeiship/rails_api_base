@@ -2,7 +2,6 @@
 > Standardized JSON API base controller for Rails with Blueprinter support.
 
 ## Features
-
 - Unified response format: `{ code, msg, data }`
 - Field selection via `?fields=title,user`
 - Auto Blueprinter integration (`PostBlueprint`)
@@ -11,9 +10,45 @@
 - N+1 safe (with proper `includes` in controller)
 
 ## Installation
-
 Add to your Gemfile:
 
 ```ruby
 gem 'rails_api_base'
 gem 'blueprinter'
+```
+
+## Usage
+-./app/blueprints/post_blueprint.rb
+-./app/controllers/posts_controller.rb
+
+```rb
+# blueprint file
+class PostBlueprint < Blueprinter::Base
+  identifier :id
+  fields :title, :content
+
+  field :user, if: ->(_field_name, model, options) {
+    Array(options[:fields]).include?(:user)
+  }
+
+  field :tags, if: ->(_field_name, model, options) {
+    Array(options[:fields]).include?(:tags)
+  }
+end
+
+# posts controller
+class PostsController < RailsApiBase::BaseController
+  blueprint_options_default :fields
+
+  private
+  def collection
+    Post.includes(:user, :tags)
+        .page(params[:page])
+        .per(params[:size] || 10)
+  end
+
+  def post_params
+    params.require(:post).permit(:title, :content)
+  end
+end
+```
