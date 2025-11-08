@@ -10,13 +10,13 @@ module RailsApiBase
     # === 统一成功响应 ===
     def render_success(data, status: :ok, message: "success", code: nil)
       code ||= response_code_for(action_name, status: status)
-      render json: { code: code, msg: message,  data: data }, status: status
+      render json: { code: code, msg: message, data: data }, status: status
     end
 
     # === 统一错误响应 ===
     def render_error(message: "Unprocessable Entity", status: :unprocessable_entity, errors: nil)
       code = response_code_for(action_name, status: status)
-      render json: { code: code, msg: message,  errors: errors }, status: status
+      render json: { code: code, msg: message, errors: errors }, status: status
     end
 
     # === 允许子类自定义响应 code ===
@@ -35,7 +35,7 @@ module RailsApiBase
     def index
       result = apply_query_with_meta(collection)
       data = {
-        query_config[:meta][:rows_key] => serialize_collection(result[:collection])
+        query_config[:meta][:rows_key] => serialize_collection(result[:collection]),
       }
       data.merge!(result[:meta]) if result[:meta]
       render_success(data)
@@ -127,7 +127,9 @@ module RailsApiBase
     end
 
     def resource_params
-      raise NotImplementedError, "Subclass must implement ##{controller_name.singularize}_params"
+      # raise NotImplementedError, "Subclass must implement ##{controller_name.singularize}_params"
+      permitted_params = params.require(controller_name.singularize.underscore.to_sym)
+      permitted_params.permit!
     end
   end
 end
