@@ -112,6 +112,10 @@ module RailsApiBase
       controller_name.singularize.classify.constantize
     end
 
+    def resource_key
+      controller_name.singularize.underscore.to_sym
+    end
+
     def resource
       instance_variable_get("@#{controller_name.singularize}")
     end
@@ -128,7 +132,7 @@ module RailsApiBase
 
     def resource_params
       # raise NotImplementedError, "Subclass must implement ##{controller_name.singularize}_params"
-      permitted_params = params.require(controller_name.singularize.underscore.to_sym)
+      permitted_params = params.require(resource_key)
       permitted_params.permit!
     end
   end
