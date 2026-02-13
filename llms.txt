@@ -1,0 +1,473 @@
+# Rails API Base
+> Standardized JSON API base controller for Rails with Blueprinter support. This gem provides a unified response format `{ code, msg, data }`, automatic CRUD scaffolding, field selection, query capabilities (pagination, sorting, searching, filtering), and N+1 prevention.
+
+**Important notes for agents:**
+- This is a Rails 6+ engine gem for building JSON APIs
+- Requires `blueprinter` gem for serialization
+- All controllers inherit from `RailsApiBase::BaseController`
+- Controllers automatically derive resource class and blueprint names
+- Supports customizable response codes and lifecycle hooks
+- Uses Kaminari for pagination (must be added to Gemfile)
+
+## Documentation
+- [Homepage](https://js.work): Project homepage
+- [Repository](https://github.com/afeiship/rails_api_base): Source code on GitHub
+- [RubyGems](https://rubygems.org/gems/rails_api_base): Gem package
+
+## Installation
+
+Add to your Gemfile:
+
+```ruby
+gem 'rails_api_base'
+gem 'blueprinter'
+gem 'kaminari'  # Optional: for pagination support
+```
+
+Then run:
+
+```bash
+bundle install
+```
+
+## Key Features
+
+- **Unified Response Format:** All responses follow `{ code, msg, data }` structure
+- **Automatic CRUD:** Full CRUD actions (index, show, create, update, destroy) built-in
+- **Field Selection:** Clients can request specific fields via `?fields=title,user`
+- **Blueprinter Integration:** Auto-discovers and uses `#{Resource}Blueprint` classes
+- **Query DSL:** Pagination, sorting, searching, and filtering support
+- **Lifecycle Hooks:** `before_create`, `after_create`, `before_update`, `after_update`
+- **N+1 Safe:** Works seamlessly with ActiveRecord `includes`
+- **Customizable Codes:** Override `response_code_for` for custom status codes
+
+## Basic Usage
+
+### 1. Create a Blueprint
+
+Create `app/blueprints/post_blueprint.rb`:
+
+```ruby
+class PostBlueprint < Blueprinter::Base
+  identifier :id
+  fields :title, :content, :created_at
+
+  # Dynamic fields for field selection
+  dynamic_fields = [:user, :tags, :comments]
+
+  dynamic_fields.each do |field_name|
+    field field_name, if: ->(_, model, options) {
+      Array(options[:fields]).include?(field_name)
+    }
+  end
+end
+```
+
+### 2. Create a Controller
+
+Create `app/controllers/posts_controller.rb`:
+
+```ruby
+class PostsController < RailsApiBase::BaseController
+  # Enable field selection via ?fields=title,user
+  blueprint_options_default :fields
+
+  # Optional: Configure query features
+  supports_query(
+    pagination: { enabled: true, default_per: 10, max_per: 100 },
+    sorting: { enabled: true, allowed_fields: [:id, :title, :created_at] },
+    searching: { enabled: true, searchable_fields: [:title, :content] },
+    filtering: { enabled: true, filterable_fields: [:status, :user_id] }
+  )
+
+  private
+
+  def collection
+    # Prevent N+1 queries
+    Post.includes(:user, :tags, :comments)
+  end
+
+  def resource_params
+    params.require(:post).permit(:title, :content, :status)
+  end
+end
+```
+
+### 3. API Endpoints
+
+```bash
+# List posts with pagination
+GET /posts?page=1&size=10
+
+# Sort posts (prefix with - for descending)
+GET /posts?sort=-created_at
+
+# Search posts
+GET /posts?q=search_term
+
+# Filter posts
+GET /posts?filter[status][eq]=published
+GET /posts?filter[user_id][in]=1,2,3
+
+# Field selection (reduces payload)
+GET /posts?fields=title,user
+
+# Single post
+GET /posts/1?fields=title,user,tags
+```
+
+### 4. Response Format
+
+All responses follow the unified format:
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "rows": [...],
+    "total": 100
+  }
+}
+```
+
+Error responses:
+
+```json
+{
+  "code": 422,
+  "msg": "Validation failed",
+  "errors": ["Title can't be blank"]
+}
+```
+
+## Core Components
+
+### BaseController
+
+The main controller class providing:
+
+- **CRUD Actions:** `index`, `show`, `create`, `update`, `destroy`
+- **Response Methods:** `render_success`, `render_error`
+- **Serialization:** `serialize_resource`, `serialize_collection`
+- **Resource Derivation:** Auto-derives model class from controller name
+
+**Key Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `render_success(data, status:, message:, code:)` | Render successful response |
+| `render_error(message:, status:, errors:)` | Render error response |
+| `collection` | Override to define base scope with includes |
+| `resource_params` | Override to define strong parameters |
+| `before_create/after_create` | Lifecycle hooks for create |
+| `before_update/after_update` | Lifecycle hooks for update |
+
+### BlueprintOptionsSupport
+
+Provides DSL for configuring Blueprinter options:
+
+```ruby
+class PostsController < RailsApiBase::BaseController
+  # Enable field selection mode
+  blueprint_options_default :fields
+
+  # Enable multiple modes
+  blueprint_options_default :fields, :defaults, :locale
+end
+```
+
+**Built-in Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `:defaults` | Passes params to blueprint |
+| `:fields` | Parses `?fields=` param for field selection |
+
+**Custom Modes:**
+
+Define `blueprint_options_for_#{mode_name}` method:
+
+```ruby
+def blueprint_options_for_locale
+  { locale: I18n.locale }
+end
+```
+
+### Queryable
+
+Provides query DSL for pagination, sorting, searching, and filtering:
+
+```ruby
+supports_query(
+  pagination: {
+    enabled: true,
+    page_param: :page,
+    per_param: :size,
+    default_per: 10,
+    max_per: 100
+  },
+  sorting: {
+    enabled: true,
+    sort_param: :sort,
+    default_direction: :asc,
+    allowed_fields: [:id, :title, :created_at]
+  },
+  searching: {
+    enabled: true,
+    search_param: :q,
+    searchable_fields: [:title, :content]
+  },
+  filtering: {
+    enabled: true,
+    filter_param: :filter,
+    filterable_fields: [:status, :category_id]
+  },
+  meta: {
+    enabled: true,
+    rows_key: :rows,
+    total_key: :total
+  }
+)
+```
+
+**Query Parameters:**
+
+| Feature | Param | Example |
+|---------|-------|---------|
+| Pagination | `page`, `size` | `?page=1&size=20` |
+| Sorting | `sort` | `?sort=-created_at` (descending) |
+| Searching | `q` | `?q=search_term` |
+| Filtering | `filter[field][op]` | `?filter[status][eq]=published` |
+
+**Filter Operators:**
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `eq` | Equal | `filter[status][eq]=published` |
+| `neq` | Not equal | `filter[status][neq]=draft` |
+| `gt` | Greater than | `filter[views][gt]=100` |
+| `gte` | Greater/equal | `filter[views][gte]=50` |
+| `lt` | Less than | `filter[views][lt]=1000` |
+| `lte` | Less/equal | `filter[views][lte]=500` |
+| `in` | In array | `filter[id][in]=1,2,3` |
+| `nin` | Not in array | `filter[id][nin]=4,5,6` |
+
+## Advanced Usage
+
+### Custom Response Codes
+
+Override `response_code_for`:
+
+```ruby
+def response_code_for(action, **context)
+  case action
+  when 'create' then 2010
+  when 'update' then 2020
+  else super
+  end
+end
+```
+
+### Custom Status Codes
+
+```ruby
+def create
+  # ...
+  render_success(data, status: :created, code: 2010)
+end
+```
+
+### Authorization Integration
+
+```ruby
+class PostsController < RailsApiBase::BaseController
+  before_action :authenticate_user!
+  before_action :set_post, only: [:update, :destroy]
+
+  private
+
+  def set_post
+    @post = current_user.posts.find(params[:id])
+  end
+end
+```
+
+### Nested Resources
+
+```ruby
+class CommentsController < RailsApiBase::BaseController
+  private
+
+  def collection
+    post = Post.find(params[:post_id])
+    post.comments.includes(:user)
+  end
+
+  def resource_params
+    params.require(:comment).permit(:body)
+  end
+end
+```
+
+### Custom Meta Information
+
+```ruby
+supports_query(
+  meta: {
+    enabled: true,
+    rows_key: :items,
+    total_key: :count,
+    custom_meta: [:page, :per_page]
+  }
+)
+```
+
+## Response Examples
+
+### Index with Pagination
+
+```bash
+GET /posts?page=1&size=10
+```
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "rows": [
+      { "id": 1, "title": "First Post" },
+      { "id": 2, "title": "Second Post" }
+    ],
+    "total": 100
+  }
+}
+```
+
+### Field Selection
+
+```bash
+GET /posts?fields=id,title,user
+```
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "rows": [
+      { "id": 1, "title": "Post", "user": { "id": 1, "name": "John" } }
+    ],
+    "total": 100
+  }
+}
+```
+
+### Create Response
+
+```json
+{
+  "code": 201,
+  "msg": "Created successfully",
+  "data": { "id": 1, "title": "New Post" }
+}
+```
+
+### Error Response
+
+```json
+{
+  "code": 422,
+  "msg": "Validation failed",
+  "errors": ["Title can't be blank", "Content is too short"]
+}
+```
+
+## Directory Structure
+
+```
+rails_api_base/
+├── app/
+│   └── controllers/
+│       ├── rails_api_base/
+│       │   └── base_controller.rb    # Main controller
+│       └── concerns/
+│           ├── blueprint_options_support.rb  # Blueprint DSL
+│           └── queryable.rb           # Query DSL
+└── lib/
+    └── rails_api_base/
+        ├── engine.rb
+        └── version.rb
+```
+
+## Dependencies
+
+- **rails** >= 6.0
+- **blueprinter** - JSON serialization
+- **kaminari** (optional) - Pagination support
+
+## Usage Notes for Agents
+
+- **Resource Naming:** Controllers use naming convention: `PostsController` -> `Post` model -> `PostBlueprint`
+- **Field Selection:** Always use `blueprint_options_default :fields` to enable field selection
+- **N+1 Prevention:** Always override `collection` to include associations
+- **Strong Parameters:** Override `resource_params` in each controller
+- **Query Features:** Use `supports_query` DSL to enable pagination/sorting/searching/filtering
+- **Pagination:** Requires `kaminari` gem to be installed
+- **Security:** Filtering uses strong parameters to prevent SQL injection
+
+## Best Practices
+
+1. **Always use field selection** for nested associations to reduce payload
+2. **Preload associations** in `collection` method to prevent N+1 queries
+3. **Use lifecycle hooks** for authorization, audits, or side effects
+4. **Configure query features** per-controller based on requirements
+5. **Validate allowed fields** for sorting and filtering
+6. **Use blueprint dynamic fields** for conditional field rendering
+7. **Override `response_code_for`** for API-specific status codes
+
+## Examples
+
+### Minimal Controller
+
+```ruby
+class PostsController < RailsApiBase::BaseController
+  blueprint_options_default :fields
+end
+```
+
+### Full-Featured Controller
+
+```ruby
+class PostsController < RailsApiBase::BaseController
+  blueprint_options_default :fields
+
+  supports_query(
+    pagination: { enabled: true, default_per: 20 },
+    sorting: { enabled: true, allowed_fields: [:id, :title, :created_at] },
+    searching: { enabled: true, searchable_fields: [:title] },
+    filtering: { enabled: true, filterable_fields: [:status, :user_id] }
+  )
+
+  before_action :authenticate_user!
+
+  private
+
+  def collection
+    Post.includes(:user, :tags)
+  end
+
+  def resource_params
+    params.require(:post).permit(:title, :content, :status, :tag_ids)
+  end
+
+  def after_create(resource)
+    # Send notification, update cache, etc.
+  end
+end
+```
+
+## License
+
+MIT License - see [MIT-LICENSE](MIT-LICENSE) file.
