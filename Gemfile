@@ -9,6 +9,12 @@ gem "sqlite3"
 
 gem "propshaft"
 
+# Required for pagination support
+gem "kaminari"
+
+# Required for JSON serialization
+gem "blueprinter"
+
 # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
 gem "rubocop-rails-omakase", require: false
 

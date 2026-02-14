@@ -135,9 +135,12 @@ module Queryable
       # 1. 获取允许过滤的字段名（字符串数组）
       filterable_fields = config[:filterable_fields].map(&:to_s)
 
-      # 2. permit 这些字段（包括嵌套操作符，如 filter[status][eq]）
-      permitted = raw_filters.permit(filterable_fields.map { |f| "#{f}" } +
-                                       filterable_fields.map { |f| "#{f}.*" })
+      # 2. permit 这些字段（包括嵌套操作符）
+      # 支持两种格式：filter[status]=published 或 filter[status][eq]=published
+      permitted = raw_filters.permit(
+        *filterable_fields.map { |f| f.to_sym },
+        *filterable_fields.map { |f| { f.to_sym => [:eq, :neq, :gt, :gte, :lt, :lte, :in, :nin] } }
+      )
 
       # 3. 转为普通 Hash
       filters = permitted.to_h

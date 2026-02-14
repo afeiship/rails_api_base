@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/feizheng/github/rails_api_base/test/dummy/db/seeds.rb << 'EOF'\n# Create sample users\nuser1 = User.create!\\(name: \"Alice\", email: \"alice@example.com\"\\)\nuser2 = User.create!\\(name: \"Bob\", email: \"bob@example.com\"\\)\n\n# Create sample posts\nPost.create!\\(title: \"First Post\", content: \"Hello World\", status: \"published\", views: 100, user: user1\\)\nPost.create!\\(title: \"Second Post\", content: \"Rails is awesome\", status: \"published\", views: 50, user: user1\\)\nPost.create!\\(title: \"Draft Post\", content: \"Work in progress\", status: \"draft\", views: 0, user: user2\\)\nPost.create!\\(title: \"Archived Post\", content: \"Old content\", status: \"archived\", views: 200, user: user2\\)\n\nputs \"Created #{User.count} users\"\nputs \"Created #{Post.count} posts\"\nEOF)",
+      "Bash(bundle exec rails:*)",
+      "Bash(bundle exec rake:*)",
+      "Bash(ls:*)",
+      "Bash(bundle install:*)",
+      "Bash(gem list:*)",
+      "Bash(ALL_PROXY=http://127.0.0.1:7890 bundle install:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(kill:*)",
+      "Bash(echo:*)"
+    ]
+  }
+}

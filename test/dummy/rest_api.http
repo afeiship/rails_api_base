@@ -1,0 +1,215 @@
+### Rails API Base - REST API Tests
+### Base URL: http://127.0.0.1:3000
+
+###############################################################################
+# Posts API
+###############################################################################
+
+### 1. List all posts (default)
+GET http://127.0.0.1:3000/api/posts
+
+### 2. List posts with pagination
+GET http://127.0.0.1:3000/api/posts?page=1&size=2
+
+### 3. List posts with field selection
+GET http://127.0.0.1:3000/api/posts?fields=id,title,user
+
+### 4. Sort posts by views (descending)
+GET http://127.0.0.1:3000/api/posts?sort=-views&fields=id,title,views
+
+### 5. Sort posts by created_at (ascending)
+GET http://127.0.0.1:3000/api/posts?sort=created_at&fields=id,title,created_at
+
+### 6. Search posts by title or content
+GET http://127.0.0.1:3000/api/posts?q=Hello
+
+### 7. Filter posts by status (equal)
+GET http://127.0.0.1:3000/api/posts?filter[status][eq]=published
+
+### 8. Filter posts by views (greater than)
+GET http://127.0.0.1:3000/api/posts?filter[views][gt]=50
+
+### 9. Filter posts by views (less than or equal)
+GET http://127.0.0.1:3000/api/posts?filter[views][lte]=100
+
+### 10. Filter posts by user_id (in array)
+GET http://127.0.0.1:3000/api/posts?filter[user_id][in]=1,2
+
+### 11. Combined filters: status=published AND views>50
+GET http://127.0.0.1:3000/api/posts?filter[status][eq]=published&filter[views][gt]=50
+
+### 12. Combined: pagination + sorting + filtering
+GET http://127.0.0.1:3000/api/posts?page=1&size=5&sort=-views&filter[status][eq]=published
+
+### 13. Get single post
+GET http://127.0.0.1:3000/api/posts/1
+
+### 14. Get single post with field selection
+GET http://127.0.0.1:3000/api/posts/1?fields=id,title,user
+
+### 15. Create new post
+POST http://127.0.0.1:3000/api/posts
+Content-Type: application/json
+
+{
+  "post": {
+    "title": "New Post from REST Client",
+    "content": "This is a test post created via REST API",
+    "status": "published",
+    "views": 0,
+    "user_id": 1
+  }
+}
+
+### 16. Update post
+PUT http://127.0.0.1:3000/api/posts/1
+Content-Type: application/json
+
+{
+  "post": {
+    "title": "Updated Post Title",
+    "content": "Updated content"
+  }
+}
+
+### 17. Update post status
+PUT http://127.0.0.1:3000/api/posts/1
+Content-Type: application/json
+
+{
+  "post": {
+    "status": "archived"
+  }
+}
+
+### 18. Delete post
+DELETE http://127.0.0.1:3000/api/posts/4
+
+###############################################################################
+# Users API
+###############################################################################
+
+### 19. List all users
+GET http://127.0.0.1:3000/api/users
+
+### 20. List users with pagination
+GET http://127.0.0.1:3000/api/users?page=1&size=10
+
+### 21. List users with field selection
+GET http://127.0.0.1:3000/api/users?fields=id,name,email
+
+### 22. Sort users by name
+GET http://127.0.0.1:3000/api/users?sort=name
+
+### 23. Search users by name or email
+GET http://127.0.0.1:3000/api/users?q=Alice
+
+### 24. Get single user
+GET http://127.0.0.1:3000/api/users/1
+
+### 25. Get single user with posts
+GET http://127.0.0.1:3000/api/users/1?fields=id,name,email,posts
+
+### 26. Create new user
+POST http://127.0.0.1:3000/api/users
+Content-Type: application/json
+
+{
+  "user": {
+    "name": "Charlie",
+    "email": "charlie@example.com"
+  }
+}
+
+### 27. Update user
+PUT http://127.0.0.1:3000/api/users/1
+Content-Type: application/json
+
+{
+  "user": {
+    "name": "Alice Updated"
+  }
+}
+
+### 28. Delete user
+DELETE http://127.0.0.1:3000/api/users/2
+
+###############################################################################
+# Nested Resources - User Posts
+###############################################################################
+
+### 29. Get posts for specific user
+GET http://127.0.0.1:3000/api/users/1/posts
+
+### 30. Get user posts with pagination
+GET http://127.0.0.1:3000/api/users/1/posts?page=1&size=5
+
+### 31. Get user posts with filtering
+GET http://127.0.0.1:3000/api/users/1/posts?filter[status][eq]=published
+
+###############################################################################
+# Error Testing
+###############################################################################
+
+### 32. Create post without required fields (should fail)
+POST http://127.0.0.1:3000/api/posts
+Content-Type: application/json
+
+{
+  "post": {
+    "content": "Missing title"
+  }
+}
+
+### 33. Create post with invalid status (should fail)
+POST http://127.0.0.1:3000/api/posts
+Content-Type: application/json
+
+{
+  "post": {
+    "title": "Test Post",
+    "status": "invalid_status"
+  }
+}
+
+### 34. Get non-existent post (should fail)
+GET http://127.0.0.1:3000/api/posts/99999
+
+### 35. Update with invalid fields (should fail validation)
+PUT http://127.0.0.1:3000/api/posts/1
+Content-Type: application/json
+
+{
+  "post": {
+    "status": "invalid"
+  }
+}
+
+###############################################################################
+# Advanced Queries
+###############################################################################
+
+### 36. Field selection with nested associations
+GET http://127.0.0.1:3000/api/posts/1?fields=id,title,user
+
+### 37. Multiple filter conditions
+GET http://127.0.0.1:3000/api/posts?filter[status][eq]=published&filter[views][gte]=50&filter[views][lt]=200
+
+### 38. Filter with IN operator
+GET http://127.0.0.1:3000/api/posts?filter[id][in]=1,2,3
+
+### 39. Filter with NOT IN operator
+GET http://127.0.0.1:3000/api/posts?filter[id][nin]=4,5,6
+
+### 40. Filter with NOT EQUAL
+GET http://127.0.0.1:3000/api/posts?filter[status][neq]=draft
+
+###############################################################################
+# Performance Tests
+###############################################################################
+
+### 41. Large page size
+GET http://127.0.0.1:3000/api/posts?page=1&size=100
+
+### 42. Complex query (all features combined)
+GET http://127.0.0.1:3000/api/posts?page=1&size=10&sort=-created_at&filter[status][eq]=published&fields=id,title,user,views
